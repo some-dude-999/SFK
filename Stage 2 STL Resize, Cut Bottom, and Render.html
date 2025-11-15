@@ -2277,7 +2277,134 @@
             xyRotationRow.appendChild(yRotationControls);
             
             card.appendChild(xyRotationRow);
-            
+
+            // CUT MODE CONTROLS
+            const cutModeContainer = document.createElement('div');
+            cutModeContainer.className = 'cut-controls-container';
+            cutModeContainer.style.marginTop = '15px';
+
+            // Cut Mode Checkbox
+            const cutModeCheckboxDiv = document.createElement('div');
+            cutModeCheckboxDiv.className = 'cut-mode-checkbox';
+            const cutModeCheckbox = document.createElement('input');
+            cutModeCheckbox.type = 'checkbox';
+            cutModeCheckbox.id = `cut-mode-${modelId}`;
+            cutModeCheckbox.addEventListener('change', (e) => {
+                const stageIndex = models.get(modelId).stageIndex;
+                const stage = stages[stageIndex];
+                if (stage) {
+                    stage.toggleCutMode(e.target.checked);
+                    const cutHeightControls = document.getElementById(`cut-height-controls-${modelId}`);
+                    if (cutHeightControls) {
+                        if (e.target.checked) {
+                            cutHeightControls.classList.add('active');
+                        } else {
+                            cutHeightControls.classList.remove('active');
+                        }
+                    }
+                }
+            });
+            cutModeCheckboxDiv.appendChild(cutModeCheckbox);
+            const cutModeLabel = document.createElement('label');
+            cutModeLabel.setAttribute('for', `cut-mode-${modelId}`);
+            cutModeLabel.textContent = 'Enable Cut Mode';
+            cutModeCheckboxDiv.appendChild(cutModeLabel);
+            cutModeContainer.appendChild(cutModeCheckboxDiv);
+
+            // Cut Height Controls (initially hidden, shown when cut mode is enabled)
+            const cutHeightControls = document.createElement('div');
+            cutHeightControls.className = 'cut-height-controls';
+            cutHeightControls.id = `cut-height-controls-${modelId}`;
+
+            const cutHeightAdjuster = document.createElement('div');
+            cutHeightAdjuster.className = 'cut-height-adjuster';
+            cutHeightAdjuster.style.display = 'flex';
+            cutHeightAdjuster.style.alignItems = 'center';
+            cutHeightAdjuster.style.gap = '8px';
+            cutHeightAdjuster.style.justifyContent = 'center';
+
+            const cutHeightLabel = document.createElement('label');
+            cutHeightLabel.textContent = 'Cut Height:';
+            cutHeightLabel.style.color = '#FF9800';
+            cutHeightLabel.style.fontSize = '12px';
+            cutHeightLabel.style.fontWeight = 'bold';
+            cutHeightAdjuster.appendChild(cutHeightLabel);
+
+            const cutHeightDownBtn = document.createElement('button');
+            cutHeightDownBtn.textContent = '−';
+            cutHeightDownBtn.className = 'height-btn';
+            cutHeightDownBtn.style.backgroundColor = '#FF9800';
+            cutHeightDownBtn.onclick = () => {
+                const stageIndex = models.get(modelId).stageIndex;
+                const stage = stages[stageIndex];
+                if (stage) {
+                    stage.cutHeight = Math.max(0.1, stage.cutHeight - 0.5);
+                    stage.updateCutCubeHeight(stage.cutHeight);
+                    const valueSpan = document.getElementById(`cut-height-value-${modelId}`);
+                    if (valueSpan) {
+                        valueSpan.textContent = `${stage.cutHeight.toFixed(1)}mm`;
+                    }
+                }
+            };
+            cutHeightAdjuster.appendChild(cutHeightDownBtn);
+
+            const cutHeightValue = document.createElement('span');
+            cutHeightValue.id = `cut-height-value-${modelId}`;
+            cutHeightValue.textContent = '0.1mm';
+            cutHeightValue.style.color = '#fff';
+            cutHeightValue.style.fontSize = '14px';
+            cutHeightValue.style.minWidth = '50px';
+            cutHeightValue.style.textAlign = 'center';
+            cutHeightAdjuster.appendChild(cutHeightValue);
+
+            const cutHeightUpBtn = document.createElement('button');
+            cutHeightUpBtn.textContent = '+';
+            cutHeightUpBtn.className = 'height-btn';
+            cutHeightUpBtn.style.backgroundColor = '#FF9800';
+            cutHeightUpBtn.onclick = () => {
+                const stageIndex = models.get(modelId).stageIndex;
+                const stage = stages[stageIndex];
+                if (stage) {
+                    stage.cutHeight = Math.min(50, stage.cutHeight + 0.5);
+                    stage.updateCutCubeHeight(stage.cutHeight);
+                    const valueSpan = document.getElementById(`cut-height-value-${modelId}`);
+                    if (valueSpan) {
+                        valueSpan.textContent = `${stage.cutHeight.toFixed(1)}mm`;
+                    }
+                }
+            };
+            cutHeightAdjuster.appendChild(cutHeightUpBtn);
+
+            cutHeightControls.appendChild(cutHeightAdjuster);
+            cutModeContainer.appendChild(cutHeightControls);
+
+            // Apply Cut Button
+            const cutButton = document.createElement('button');
+            cutButton.id = `cut-button-${modelId}`;
+            cutButton.className = 'btn-cut';
+            cutButton.textContent = '✂️ Apply Flat Bottom Cut';
+            cutButton.style.width = '100%';
+            cutButton.style.marginTop = '8px';
+            cutButton.style.padding = '10px';
+            cutButton.style.backgroundColor = '#FF9800';
+            cutButton.style.color = 'white';
+            cutButton.style.border = 'none';
+            cutButton.style.borderRadius = '5px';
+            cutButton.style.cursor = 'pointer';
+            cutButton.style.fontWeight = 'bold';
+            cutButton.onclick = () => applyCut(modelId);
+            cutModeContainer.appendChild(cutButton);
+
+            // Flatness Status Display
+            const flatnessStatus = document.createElement('div');
+            flatnessStatus.id = `flatness-${modelId}`;
+            flatnessStatus.className = 'flatness-status';
+            flatnessStatus.textContent = '⚙️ Ready for Cut';
+            flatnessStatus.style.marginTop = '8px';
+            cutModeContainer.appendChild(flatnessStatus);
+
+            card.appendChild(cutModeContainer);
+
             document.getElementById('stages-container').appendChild(card);
             // Initialize stage and add model
             stage.init(viewport);
@@ -2327,8 +2454,6 @@
             stage.addMonster(clonedMesh, modelId);
             stages.push(stage);
             updateAllUIForModel(modelId);
-            // Note: Full rotation controls, cut mode controls, and flatness display would go here
-            // For brevity, they're omitted but would be added in the complete implementation
         }
         function updateModelCount() {
             const count = models.size;
