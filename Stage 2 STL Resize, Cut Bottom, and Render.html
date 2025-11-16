@@ -3011,6 +3011,9 @@
                 document.getElementById(`y-label-${modelId}`).textContent = `Y-Axis Rotation (Turntable): ${degrees}°`;
                 updateModelRotation(modelId, 'y', degrees);
             });
+            yRotationSlider.addEventListener('change', () => {
+                bakeRotation(modelId); // Bake rotation on slider release
+            });
             yRotationControls.appendChild(yRotationSlider);
             card.appendChild(yRotationControls);
 
@@ -3041,6 +3044,9 @@
                 document.getElementById(`x-label-${modelId}`).textContent = `X-Axis (Pitch): ${degrees}°`;
                 updateModelRotation(modelId, 'x', degrees);
             });
+            xRotationSlider.addEventListener('change', () => {
+                bakeRotation(modelId); // Bake rotation on slider release
+            });
             xRotationControls.appendChild(xRotationSlider);
             xzRotationRow.appendChild(xRotationControls);
 
@@ -3064,6 +3070,9 @@
                 const degrees = parseFloat(e.target.value);
                 document.getElementById(`z-label-${modelId}`).textContent = `Z-Axis (Roll): ${degrees}°`;
                 updateModelRotation(modelId, 'z', degrees);
+            });
+            zRotationSlider.addEventListener('change', () => {
+                bakeRotation(modelId); // Bake rotation on slider release
             });
             zRotationControls.appendChild(zRotationSlider);
             xzRotationRow.appendChild(zRotationControls);
@@ -3244,6 +3253,40 @@
             updateAllUIForModel(modelId);
             checkExportButtons();
         }
+        function bakeRotation(modelId) {
+            const modelData = models.get(modelId);
+            if (!modelData) return;
+
+            // Bake current rotation into base (like Stage 1's createRGBBoundingBox)
+            modelData.baseModelRotation.copy(modelData.mesh.quaternion);
+
+            // Reset baseBoundingBoxRotation to identity (keeps axes in world space)
+            modelData.baseBoundingBoxRotation.identity();
+
+            // Reset rotation values to 0
+            modelData.rotationX = 0;
+            modelData.rotationY = 0;
+            modelData.rotationZ = 0;
+
+            // Reset sliders to 0
+            const xSlider = document.getElementById(`x-rotation-${modelId}`);
+            const ySlider = document.getElementById(`y-rotation-${modelId}`);
+            const zSlider = document.getElementById(`z-rotation-${modelId}`);
+
+            if (xSlider) {
+                xSlider.value = 0;
+                document.getElementById(`x-label-${modelId}`).textContent = `X-Axis (Pitch): 0°`;
+            }
+            if (ySlider) {
+                ySlider.value = 0;
+                document.getElementById(`y-label-${modelId}`).textContent = `Y-Axis Rotation (Turntable): 0°`;
+            }
+            if (zSlider) {
+                zSlider.value = 0;
+                document.getElementById(`z-label-${modelId}`).textContent = `Z-Axis (Roll): 0°`;
+            }
+        }
+
         function updateModelRotation(modelId, axis, degrees, showHelpers = false) {
             const modelData = models.get(modelId);
             if (!modelData) return;
@@ -3269,7 +3312,8 @@
             // Create a relative quaternion using Stage 1's approach
             const relativeQuat = new THREE.Quaternion();
 
-            // Get the base axes after any initial rotation
+            // Get the base axes - since baseBoundingBoxRotation is always identity (reset on bake),
+            // these are ALWAYS world-space axes, giving camera-relative rotation feel
             const baseXAxis = new THREE.Vector3(1, 0, 0).applyQuaternion(modelData.baseBoundingBoxRotation);
             const baseYAxis = new THREE.Vector3(0, 1, 0).applyQuaternion(modelData.baseBoundingBoxRotation);
             const baseZAxis = new THREE.Vector3(0, 0, 1).applyQuaternion(modelData.baseBoundingBoxRotation);
