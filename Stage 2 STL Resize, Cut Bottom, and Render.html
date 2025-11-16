@@ -1603,12 +1603,27 @@
                 this.renderer.getClearColor(clearColor);
                 const clearAlpha = this.renderer.getClearAlpha();
                 tempRenderer.setClearColor(clearColor, clearAlpha);
+
+                const originalBackground = this.scene.background;
                 this.scene.background = new THREE.Color(0x2a2a2a);
                 tempRenderer.render(this.scene, this.camera);
 
-                // Add flatness status border to the technical JPG render
-                const canvas = tempRenderer.domElement;
+                const glCanvas = tempRenderer.domElement;
+                const canvas = document.createElement('canvas');
+                canvas.width = width;
+                canvas.height = height;
                 const ctx = canvas.getContext('2d');
+
+                if (!ctx) {
+                    console.error('Failed to obtain 2D context for screenshot canvas.');
+                    const fallbackDataURL = glCanvas.toDataURL('image/png');
+                    this.scene.background = originalBackground;
+                    if (tempRenderer.forceContextLoss) tempRenderer.forceContextLoss();
+                    tempRenderer.dispose();
+                    return fallbackDataURL;
+                }
+
+                ctx.drawImage(glCanvas, 0, 0);
 
                 // Determine border color based on flatness status
                 let borderColor = '#444'; // Default gray
@@ -1627,6 +1642,8 @@
                 ctx.strokeRect(borderWidth / 2, borderWidth / 2, width - borderWidth, height - borderWidth);
 
                 const dataURL = canvas.toDataURL('image/png');
+                this.scene.background = originalBackground;
+                if (tempRenderer.forceContextLoss) tempRenderer.forceContextLoss();
                 tempRenderer.dispose();
                 return dataURL;
             }
