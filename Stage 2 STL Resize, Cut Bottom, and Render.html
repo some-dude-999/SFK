@@ -2526,13 +2526,6 @@
                             geometry = cleanedGeometry;
                         }
 
-                        // Always fix normals (like Blender's Shift+N)
-                        const fixedGeometry = fixNormals(geometry);
-                        if (fixedGeometry !== geometry) {
-                            geometry.dispose();
-                            geometry = fixedGeometry;
-                        }
-
                         geometry.rotateX(-Math.PI / 2);
                         geometry.center();
                         geometry.computeBoundingBox();
@@ -3910,17 +3903,40 @@
                             });
                             const triangleIndices = earcut(flatCoords);
                             if (triangleIndices && triangleIndices.length > 0) {
+                                // Track where cap triangles start in newVertices array
+                                const capStartIndex = newVertices.length;
+
                                 for (let i = 0; i < triangleIndices.length; i += 3) {
                                     const i0 = triangleIndices[i];
                                     const i1 = triangleIndices[i + 1];
                                     const i2 = triangleIndices[i + 2];
-                                    newVertices.push(
-                                        orderedLoop[i0].clone(),
-                                        orderedLoop[i1].clone(),
-                                        orderedLoop[i2].clone()
-                                    );
+
+                                    const v0 = orderedLoop[i0].clone();
+                                    const v1 = orderedLoop[i1].clone();
+                                    const v2 = orderedLoop[i2].clone();
+
+                                    // Calculate face normal for this cap triangle
+                                    const e1x = v1.x - v0.x;
+                                    const e1y = v1.y - v0.y;
+                                    const e1z = v1.z - v0.z;
+                                    const e2x = v2.x - v0.x;
+                                    const e2y = v2.y - v0.y;
+                                    const e2z = v2.z - v0.z;
+
+                                    // Cross product to get normal
+                                    const normalY = e1z * e2x - e1x * e2z;
+
+                                    // Cap should face downward (negative Y normal)
+                                    // If normal points upward (positive Y), reverse winding order
+                                    if (normalY > 0) {
+                                        // Flip triangle by swapping v1 and v2
+                                        newVertices.push(v0, v2, v1);
+                                    } else {
+                                        // Keep original order
+                                        newVertices.push(v0, v1, v2);
+                                    }
                                 }
-                                console.log('✅ Created', triangleIndices.length / 3, 'triangles for island', islandIdx, 'using earcut');
+                                console.log('✅ Created', triangleIndices.length / 3, 'triangles for island', islandIdx, 'with corrected normals');
                             } else {
                                 console.warn('⚠️ Earcut failed for island', islandIdx);
                             }
@@ -3947,13 +3963,6 @@
                     if (finalGeometry !== resultGeometry) {
                         resultGeometry.dispose();
                     }
-                }
-
-                // Always fix normals after cut (like Blender's Shift+N)
-                const fixedGeometry = fixNormals(finalGeometry);
-                if (fixedGeometry !== finalGeometry) {
-                    finalGeometry.dispose();
-                    finalGeometry = fixedGeometry;
                 }
 
                 const oldGeometry = mesh.geometry;
