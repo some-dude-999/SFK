@@ -649,6 +649,10 @@
             <input type="checkbox" id="globalRemoveFloating" checked style="width: 16px; height: 16px; cursor: pointer;">
             <span style="color: #4CAF50; font-weight: bold;">🧹 Remove Floating Parts</span>
         </label>
+        <label style="display: flex; align-items: center; gap: 4px; font-size: 11px; cursor: pointer;">
+            <input type="checkbox" id="debugBoundingBox" style="width: 16px; height: 16px; cursor: pointer;">
+            <span style="color: #FFD700; font-weight: bold;">📦 Debug Bounding Box</span>
+        </label>
     </div>
     <div class="sticky-footer">
         <button class="btn-nav" id="prevPage" disabled>◀ Previous Page</button>
@@ -1735,10 +1739,10 @@
                     this.renderer.render(this.scene, this.camera);
                 }
             }
-            showBoundingBoxAndAxes(mesh) {
+            showBoundingBoxAndAxes(mesh, color = 0xFFD700) {
                 this.hideBoundingBoxAndAxes();
                 const box = new THREE.Box3().setFromObject(mesh);
-                this.boundingBoxHelper = new THREE.Box3Helper(box, 0xffff00);
+                this.boundingBoxHelper = new THREE.Box3Helper(box, color);
                 this.boundingBoxHelper.castShadow = false; // Helpers should NOT cast shadows
                 this.scene.add(this.boundingBoxHelper);
                 const size = box.getSize(new THREE.Vector3());
@@ -2721,25 +2725,14 @@
                 heightTitleLabel.style.marginBottom = '3px';
                 heightControlsDiv.appendChild(heightTitleLabel);
 
-                // Feet controls
-                const feetRow = document.createElement('div');
-                feetRow.style.display = 'flex';
-                feetRow.style.alignItems = 'center';
-                feetRow.style.gap = '3px';
-                feetRow.style.justifyContent = 'center';
+                // Horizontal layout for Feet and Inches controls
+                const heightRow = document.createElement('div');
+                heightRow.style.display = 'flex';
+                heightRow.style.alignItems = 'center';
+                heightRow.style.gap = '5px';
+                heightRow.style.justifyContent = 'center';
 
-                const feetDownBtn = document.createElement('button');
-                feetDownBtn.textContent = '▼';
-                feetDownBtn.style.padding = '2px 6px';
-                feetDownBtn.style.backgroundColor = '#4CAF50';
-                feetDownBtn.style.color = 'white';
-                feetDownBtn.style.border = 'none';
-                feetDownBtn.style.borderRadius = '3px';
-                feetDownBtn.style.cursor = 'pointer';
-                feetDownBtn.style.fontSize = '10px';
-                feetDownBtn.onclick = () => adjustHeight(modelId, 'feet', -1);
-                feetRow.appendChild(feetDownBtn);
-
+                // Feet input
                 const feetInput = document.createElement('input');
                 feetInput.type = 'number';
                 feetInput.id = `feet-${modelId}`;
@@ -2755,48 +2748,50 @@
                 feetInput.style.textAlign = 'center';
                 feetInput.style.fontSize = '12px';
                 feetInput.addEventListener('input', () => updateModelFromInputs(modelId));
-                feetRow.appendChild(feetInput);
+                heightRow.appendChild(feetInput);
 
                 const feetLabel = document.createElement('span');
                 feetLabel.textContent = "'";
                 feetLabel.style.color = '#aaa';
-                feetLabel.style.fontSize = '12px';
+                feetLabel.style.fontSize = '14px';
                 feetLabel.style.fontWeight = 'bold';
-                feetRow.appendChild(feetLabel);
+                heightRow.appendChild(feetLabel);
+
+                // Feet +/- buttons container
+                const feetBtnsContainer = document.createElement('div');
+                feetBtnsContainer.style.display = 'flex';
+                feetBtnsContainer.style.flexDirection = 'column';
+                feetBtnsContainer.style.gap = '1px';
 
                 const feetUpBtn = document.createElement('button');
-                feetUpBtn.textContent = '▲';
-                feetUpBtn.style.padding = '2px 6px';
+                feetUpBtn.textContent = '+';
+                feetUpBtn.style.padding = '1px 5px';
                 feetUpBtn.style.backgroundColor = '#4CAF50';
                 feetUpBtn.style.color = 'white';
                 feetUpBtn.style.border = 'none';
-                feetUpBtn.style.borderRadius = '3px';
+                feetUpBtn.style.borderRadius = '2px';
                 feetUpBtn.style.cursor = 'pointer';
                 feetUpBtn.style.fontSize = '10px';
+                feetUpBtn.style.lineHeight = '1';
                 feetUpBtn.onclick = () => adjustHeight(modelId, 'feet', 1);
-                feetRow.appendChild(feetUpBtn);
+                feetBtnsContainer.appendChild(feetUpBtn);
 
-                heightControlsDiv.appendChild(feetRow);
+                const feetDownBtn = document.createElement('button');
+                feetDownBtn.textContent = '-';
+                feetDownBtn.style.padding = '1px 5px';
+                feetDownBtn.style.backgroundColor = '#4CAF50';
+                feetDownBtn.style.color = 'white';
+                feetDownBtn.style.border = 'none';
+                feetDownBtn.style.borderRadius = '2px';
+                feetDownBtn.style.cursor = 'pointer';
+                feetDownBtn.style.fontSize = '10px';
+                feetDownBtn.style.lineHeight = '1';
+                feetDownBtn.onclick = () => adjustHeight(modelId, 'feet', -1);
+                feetBtnsContainer.appendChild(feetDownBtn);
 
-                // Inches controls
-                const inchRow = document.createElement('div');
-                inchRow.style.display = 'flex';
-                inchRow.style.alignItems = 'center';
-                inchRow.style.gap = '3px';
-                inchRow.style.justifyContent = 'center';
+                heightRow.appendChild(feetBtnsContainer);
 
-                const inchDownBtn = document.createElement('button');
-                inchDownBtn.textContent = '▼';
-                inchDownBtn.style.padding = '2px 6px';
-                inchDownBtn.style.backgroundColor = '#4CAF50';
-                inchDownBtn.style.color = 'white';
-                inchDownBtn.style.border = 'none';
-                inchDownBtn.style.borderRadius = '3px';
-                inchDownBtn.style.cursor = 'pointer';
-                inchDownBtn.style.fontSize = '10px';
-                inchDownBtn.onclick = () => adjustHeight(modelId, 'inches', -1);
-                inchRow.appendChild(inchDownBtn);
-
+                // Inches input
                 const inchInput = document.createElement('input');
                 inchInput.type = 'number';
                 inchInput.id = `inches-${modelId}`;
@@ -2812,28 +2807,50 @@
                 inchInput.style.textAlign = 'center';
                 inchInput.style.fontSize = '12px';
                 inchInput.addEventListener('input', () => updateModelFromInputs(modelId));
-                inchRow.appendChild(inchInput);
+                heightRow.appendChild(inchInput);
 
                 const inchLabel = document.createElement('span');
                 inchLabel.textContent = '"';
                 inchLabel.style.color = '#aaa';
-                inchLabel.style.fontSize = '12px';
+                inchLabel.style.fontSize = '14px';
                 inchLabel.style.fontWeight = 'bold';
-                inchRow.appendChild(inchLabel);
+                heightRow.appendChild(inchLabel);
+
+                // Inches +/- buttons container
+                const inchBtnsContainer = document.createElement('div');
+                inchBtnsContainer.style.display = 'flex';
+                inchBtnsContainer.style.flexDirection = 'column';
+                inchBtnsContainer.style.gap = '1px';
 
                 const inchUpBtn = document.createElement('button');
-                inchUpBtn.textContent = '▲';
-                inchUpBtn.style.padding = '2px 6px';
+                inchUpBtn.textContent = '+';
+                inchUpBtn.style.padding = '1px 5px';
                 inchUpBtn.style.backgroundColor = '#4CAF50';
                 inchUpBtn.style.color = 'white';
                 inchUpBtn.style.border = 'none';
-                inchUpBtn.style.borderRadius = '3px';
+                inchUpBtn.style.borderRadius = '2px';
                 inchUpBtn.style.cursor = 'pointer';
                 inchUpBtn.style.fontSize = '10px';
+                inchUpBtn.style.lineHeight = '1';
                 inchUpBtn.onclick = () => adjustHeight(modelId, 'inches', 1);
-                inchRow.appendChild(inchUpBtn);
+                inchBtnsContainer.appendChild(inchUpBtn);
 
-                heightControlsDiv.appendChild(inchRow);
+                const inchDownBtn = document.createElement('button');
+                inchDownBtn.textContent = '-';
+                inchDownBtn.style.padding = '1px 5px';
+                inchDownBtn.style.backgroundColor = '#4CAF50';
+                inchDownBtn.style.color = 'white';
+                inchDownBtn.style.border = 'none';
+                inchDownBtn.style.borderRadius = '2px';
+                inchDownBtn.style.cursor = 'pointer';
+                inchDownBtn.style.fontSize = '10px';
+                inchDownBtn.style.lineHeight = '1';
+                inchDownBtn.onclick = () => adjustHeight(modelId, 'inches', -1);
+                inchBtnsContainer.appendChild(inchDownBtn);
+
+                heightRow.appendChild(inchBtnsContainer);
+
+                heightControlsDiv.appendChild(heightRow);
 
                 // MM display
                 const mmDisplay = document.createElement('div');
@@ -2974,71 +2991,13 @@
             removeFloatingCheckbox.style.display = 'none'; // Hidden from user
             card.appendChild(removeFloatingCheckbox);
 
-            // Z-AXIS ROTATION (BLUE) - Turntable/Floor Rotation - MOVED TO TOP
-            // NOTE: This is actually Y-axis rotation in the 3D engine, but we call it Z-axis
-            // because the viewer sees it as rotation on the floor (like a turntable), which
-            // feels like Z-axis rotation in most 3D software where Z is up.
-            const zRotationControls = document.createElement('div');
-            zRotationControls.className = 'rotation-controls z-axis';
-            const zRotationLabel = document.createElement('label');
-            zRotationLabel.className = 'rotation-label z-axis';
-            zRotationLabel.id = `z-label-${modelId}`;
-            zRotationLabel.textContent = `Z-Axis Rotation (Turntable): 125°`;
-            zRotationControls.appendChild(zRotationLabel);
-            const zRotationSlider = document.createElement('input');
-            zRotationSlider.type = 'range';
-            zRotationSlider.className = 'rotation-slider z-axis';
-            zRotationSlider.id = `z-rotation-${modelId}`;
-            zRotationSlider.min = -180;
-            zRotationSlider.max = 180;
-            zRotationSlider.value = 125;
-            zRotationSlider.addEventListener('input', (e) => {
-                const degrees = parseFloat(e.target.value);
-                document.getElementById(`z-label-${modelId}`).textContent = `Z-Axis Rotation (Turntable): ${degrees}°`;
-                // This controls Y-axis rotation in the 3D engine (rotation on the ground plane)
-                updateModelRotation(modelId, 'y', degrees);
-            });
-            zRotationControls.appendChild(zRotationSlider);
-            card.appendChild(zRotationControls);
-            
-            // X-AXIS and Y-AXIS ROTATION (side by side in same row)
-            const xyRotationRow = document.createElement('div');
-            xyRotationRow.style.display = 'flex';
-            xyRotationRow.style.gap = '5px';
-            xyRotationRow.style.marginTop = '5px';
-            
-            // X-AXIS ROTATION (RED) - Controls actual X-axis rotation
-            const xRotationControls = document.createElement('div');
-            xRotationControls.className = 'rotation-controls x-axis';
-            xRotationControls.style.flex = '1';
-            const xRotationLabel = document.createElement('label');
-            xRotationLabel.className = 'rotation-label x-axis';
-            xRotationLabel.id = `x-label-${modelId}`;
-            xRotationLabel.textContent = `X-Axis: 0°`;
-            xRotationControls.appendChild(xRotationLabel);
-            const xRotationSlider = document.createElement('input');
-            xRotationSlider.type = 'range';
-            xRotationSlider.className = 'rotation-slider x-axis';
-            xRotationSlider.id = `x-rotation-${modelId}`;
-            xRotationSlider.min = -180;
-            xRotationSlider.max = 180;
-            xRotationSlider.value = 0;
-            xRotationSlider.addEventListener('input', (e) => {
-                const degrees = parseFloat(e.target.value);
-                document.getElementById(`x-label-${modelId}`).textContent = `X-Axis: ${degrees}°`;
-                updateModelRotation(modelId, 'x', degrees);
-            });
-            xRotationControls.appendChild(xRotationSlider);
-            xyRotationRow.appendChild(xRotationControls);
-            
-            // Y-AXIS ROTATION (GREEN) - Controls Z-axis rotation  
+            // Y-AXIS ROTATION (GREEN) - Turntable/Floor Rotation - MOVED TO TOP
             const yRotationControls = document.createElement('div');
             yRotationControls.className = 'rotation-controls y-axis';
-            yRotationControls.style.flex = '1';
             const yRotationLabel = document.createElement('label');
             yRotationLabel.className = 'rotation-label y-axis';
             yRotationLabel.id = `y-label-${modelId}`;
-            yRotationLabel.textContent = `Y-Axis: 0°`;
+            yRotationLabel.textContent = `Y-Axis Rotation (Turntable): 0°`;
             yRotationControls.appendChild(yRotationLabel);
             const yRotationSlider = document.createElement('input');
             yRotationSlider.type = 'range';
@@ -3049,13 +3008,67 @@
             yRotationSlider.value = 0;
             yRotationSlider.addEventListener('input', (e) => {
                 const degrees = parseFloat(e.target.value);
-                document.getElementById(`y-label-${modelId}`).textContent = `Y-Axis: ${degrees}°`;
-                updateModelRotation(modelId, 'z', degrees);
+                document.getElementById(`y-label-${modelId}`).textContent = `Y-Axis Rotation (Turntable): ${degrees}°`;
+                updateModelRotation(modelId, 'y', degrees);
             });
             yRotationControls.appendChild(yRotationSlider);
-            xyRotationRow.appendChild(yRotationControls);
-            
-            card.appendChild(xyRotationRow);
+            card.appendChild(yRotationControls);
+
+            // X-AXIS and Z-AXIS ROTATION (side by side in same row)
+            const xzRotationRow = document.createElement('div');
+            xzRotationRow.style.display = 'flex';
+            xzRotationRow.style.gap = '5px';
+            xzRotationRow.style.marginTop = '5px';
+
+            // X-AXIS ROTATION (RED) - Pitch (forward/backward tilt)
+            const xRotationControls = document.createElement('div');
+            xRotationControls.className = 'rotation-controls x-axis';
+            xRotationControls.style.flex = '1';
+            const xRotationLabel = document.createElement('label');
+            xRotationLabel.className = 'rotation-label x-axis';
+            xRotationLabel.id = `x-label-${modelId}`;
+            xRotationLabel.textContent = `X-Axis (Pitch): 0°`;
+            xRotationControls.appendChild(xRotationLabel);
+            const xRotationSlider = document.createElement('input');
+            xRotationSlider.type = 'range';
+            xRotationSlider.className = 'rotation-slider x-axis';
+            xRotationSlider.id = `x-rotation-${modelId}`;
+            xRotationSlider.min = -180;
+            xRotationSlider.max = 180;
+            xRotationSlider.value = 0;
+            xRotationSlider.addEventListener('input', (e) => {
+                const degrees = parseFloat(e.target.value);
+                document.getElementById(`x-label-${modelId}`).textContent = `X-Axis (Pitch): ${degrees}°`;
+                updateModelRotation(modelId, 'x', degrees);
+            });
+            xRotationControls.appendChild(xRotationSlider);
+            xzRotationRow.appendChild(xRotationControls);
+
+            // Z-AXIS ROTATION (BLUE) - Roll (side tilt)
+            const zRotationControls = document.createElement('div');
+            zRotationControls.className = 'rotation-controls z-axis';
+            zRotationControls.style.flex = '1';
+            const zRotationLabel = document.createElement('label');
+            zRotationLabel.className = 'rotation-label z-axis';
+            zRotationLabel.id = `z-label-${modelId}`;
+            zRotationLabel.textContent = `Z-Axis (Roll): 0°`;
+            zRotationControls.appendChild(zRotationLabel);
+            const zRotationSlider = document.createElement('input');
+            zRotationSlider.type = 'range';
+            zRotationSlider.className = 'rotation-slider z-axis';
+            zRotationSlider.id = `z-rotation-${modelId}`;
+            zRotationSlider.min = -180;
+            zRotationSlider.max = 180;
+            zRotationSlider.value = 0;
+            zRotationSlider.addEventListener('input', (e) => {
+                const degrees = parseFloat(e.target.value);
+                document.getElementById(`z-label-${modelId}`).textContent = `Z-Axis (Roll): ${degrees}°`;
+                updateModelRotation(modelId, 'z', degrees);
+            });
+            zRotationControls.appendChild(zRotationSlider);
+            xzRotationRow.appendChild(zRotationControls);
+
+            card.appendChild(xzRotationRow);
 
             document.getElementById('stages-container').appendChild(card);
             // Initialize stage and add model
@@ -3088,8 +3101,10 @@
                 filename: monsterData.filename,
                 scale: initialScale,
                 rotationX: 0,
-                rotationY: 125,
+                rotationY: 0,
                 rotationZ: 0,
+                baseModelRotation: new THREE.Quaternion(),
+                baseBoundingBoxRotation: new THREE.Quaternion(),
                 stageIndex: stageIndex,
                 originalHeight: monsterData.originalHeight,
                 originalMaxDimension: monsterData.originalMaxDimension,
@@ -3099,10 +3114,16 @@
                 clonedMesh.scale.set(initialScale, initialScale, initialScale);
                 clonedMesh.updateMatrixWorld(true);
             }
+            // Initialize rotation to identity (no rotation)
             clonedMesh.rotation.x = 0;
-            clonedMesh.rotation.y = (125 * Math.PI) / 180;
+            clonedMesh.rotation.y = 0;
             clonedMesh.rotation.z = 0;
             clonedMesh.updateMatrixWorld(true);
+
+            // Store the base rotation as a quaternion
+            const modelData = models.get(modelId);
+            modelData.baseModelRotation.copy(clonedMesh.quaternion);
+            modelData.baseBoundingBoxRotation.identity();
             stage.addMonster(clonedMesh, modelId);
             stages.push(stage);
             updateAllUIForModel(modelId);
@@ -3226,6 +3247,17 @@
         function updateModelRotation(modelId, axis, degrees, showHelpers = false) {
             const modelData = models.get(modelId);
             if (!modelData) return;
+
+            // Initialize base rotations if not present (for existing models)
+            if (!modelData.baseModelRotation) {
+                modelData.baseModelRotation = new THREE.Quaternion();
+                modelData.baseModelRotation.copy(modelData.mesh.quaternion);
+            }
+            if (!modelData.baseBoundingBoxRotation) {
+                modelData.baseBoundingBoxRotation = new THREE.Quaternion();
+            }
+
+            // Update rotation values
             if (axis === 'x') {
                 modelData.rotationX = degrees;
             } else if (axis === 'y') {
@@ -3233,24 +3265,66 @@
             } else if (axis === 'z') {
                 modelData.rotationZ = degrees;
             }
-            modelData.mesh.rotation.x = modelData.rotationX * Math.PI / 180;
-            modelData.mesh.rotation.y = modelData.rotationY * Math.PI / 180;
-            modelData.mesh.rotation.z = modelData.rotationZ * Math.PI / 180;
+
+            // Create a relative quaternion using Stage 1's approach
+            const relativeQuat = new THREE.Quaternion();
+
+            // Get the base axes after any initial rotation
+            const baseXAxis = new THREE.Vector3(1, 0, 0).applyQuaternion(modelData.baseBoundingBoxRotation);
+            const baseYAxis = new THREE.Vector3(0, 1, 0).applyQuaternion(modelData.baseBoundingBoxRotation);
+            const baseZAxis = new THREE.Vector3(0, 0, 1).applyQuaternion(modelData.baseBoundingBoxRotation);
+
+            // Apply X-axis rotation
+            if (modelData.rotationX && modelData.rotationX !== 0) {
+                const xRotQuat = new THREE.Quaternion().setFromAxisAngle(
+                    baseXAxis,
+                    modelData.rotationX * Math.PI / 180
+                );
+                relativeQuat.premultiply(xRotQuat);
+            }
+
+            // Apply Y-axis rotation
+            if (modelData.rotationY && modelData.rotationY !== 0) {
+                const yRotQuat = new THREE.Quaternion().setFromAxisAngle(
+                    baseYAxis,
+                    modelData.rotationY * Math.PI / 180
+                );
+                relativeQuat.premultiply(yRotQuat);
+            }
+
+            // Apply Z-axis rotation
+            if (modelData.rotationZ && modelData.rotationZ !== 0) {
+                const zRotQuat = new THREE.Quaternion().setFromAxisAngle(
+                    baseZAxis,
+                    modelData.rotationZ * Math.PI / 180
+                );
+                relativeQuat.premultiply(zRotQuat);
+            }
+
+            // Apply combined rotation to the mesh
+            modelData.mesh.quaternion.copy(modelData.baseModelRotation).premultiply(relativeQuat);
+
             modelData.mesh.updateMatrixWorld(true);
+
             if (stages[modelData.stageIndex]) {
                 const stage = stages[modelData.stageIndex];
-                
+
+                // Update bounding box rotation to match mesh
+                if (stage.boundingBoxHelper) {
+                    stage.boundingBoxHelper.quaternion.copy(modelData.baseBoundingBoxRotation).premultiply(relativeQuat);
+                }
+
                 // Re-align to ground after rotation
                 stage.alignToGround(modelData.mesh);
-                
+
                 // Re-check flatness
                 const flatnessResult = stage.checkFlatness(modelData.mesh);
                 stage.flatnessStatus.set(modelId, flatnessResult);
                 stage.updateFlatnessDisplay();
-                
+
                 // Update height labels
                 stage.updateHeightLabel(modelId, modelData.mesh);
-                
+
                 if (showHelpers) {
                     stage.showBoundingBoxAndAxes(modelData.mesh);
                 } else {
@@ -3809,6 +3883,23 @@
         document.getElementById('exportEverything').addEventListener('click', exportEverything);
         document.getElementById('prevPage').addEventListener('click', goToPreviousPage);
         document.getElementById('nextPage').addEventListener('click', goToNextPage);
+
+        // Debug bounding box toggle
+        document.getElementById('debugBoundingBox').addEventListener('change', (e) => {
+            const showDebugBox = e.target.checked;
+            stages.forEach((stage, stageIndex) => {
+                models.forEach((modelData, modelId) => {
+                    if (modelData.stageIndex === stageIndex && modelData.mesh) {
+                        if (showDebugBox) {
+                            stage.showBoundingBoxAndAxes(modelData.mesh, 0xFFD700);
+                        } else {
+                            stage.hideBoundingBoxAndAxes();
+                        }
+                    }
+                });
+            });
+        });
+
         setupDragAndDrop();
         updateModelCount();
         const pageDisplay = document.getElementById('pageDisplay');
