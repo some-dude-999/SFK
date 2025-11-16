@@ -1616,6 +1616,13 @@
 
                 const originalBackground = this.scene.background;
                 this.scene.background = new THREE.Color(0x2a2a2a);
+
+                // Hide cut cube and label during screenshot
+                const cutCubeVisible = this.cutCube ? this.cutCube.visible : false;
+                const cutCubeLabelVisible = this.cutCubeLabel ? this.cutCubeLabel.visible : false;
+                if (this.cutCube) this.cutCube.visible = false;
+                if (this.cutCubeLabel) this.cutCubeLabel.visible = false;
+
                 tempRenderer.render(this.scene, this.camera);
 
                 const glCanvas = tempRenderer.domElement;
@@ -1628,6 +1635,9 @@
                     console.error('Failed to obtain 2D context for screenshot canvas.');
                     const fallbackDataURL = glCanvas.toDataURL('image/png');
                     this.scene.background = originalBackground;
+                    // Restore cut cube and label visibility
+                    if (this.cutCube) this.cutCube.visible = cutCubeVisible;
+                    if (this.cutCubeLabel) this.cutCubeLabel.visible = cutCubeLabelVisible;
                     if (tempRenderer.forceContextLoss) tempRenderer.forceContextLoss();
                     tempRenderer.dispose();
                     return fallbackDataURL;
@@ -1653,6 +1663,11 @@
 
                 const dataURL = canvas.toDataURL('image/png');
                 this.scene.background = originalBackground;
+
+                // Restore cut cube and label visibility
+                if (this.cutCube) this.cutCube.visible = cutCubeVisible;
+                if (this.cutCubeLabel) this.cutCubeLabel.visible = cutCubeLabelVisible;
+
                 if (tempRenderer.forceContextLoss) tempRenderer.forceContextLoss();
                 tempRenderer.dispose();
                 return dataURL;
@@ -1672,8 +1687,12 @@
                 const labelVisible = this.manDudeLabel3D ? this.manDudeLabel3D.visible : false;
                 const groundVisibles = this.groundElements ? this.groundElements.map(el => el.visible) : [];
                 const heightLabelsVisibles = Array.from(this.heightLabels.values()).map(label => label.visible);
+                const cutCubeVisible = this.cutCube ? this.cutCube.visible : false;
+                const cutCubeLabelVisible = this.cutCubeLabel ? this.cutCubeLabel.visible : false;
                 if (this.manGroup) this.manGroup.visible = false;
                 if (this.manDudeLabel3D) this.manDudeLabel3D.visible = false;
+                if (this.cutCube) this.cutCube.visible = false;
+                if (this.cutCubeLabel) this.cutCubeLabel.visible = false;
                 if (this.groundElements) {
                     this.groundElements.forEach(element => {
                         element.visible = false;
@@ -1750,6 +1769,8 @@
                 this.camera.updateProjectionMatrix();
                 if (this.manGroup) this.manGroup.visible = manVisible;
                 if (this.manDudeLabel3D) this.manDudeLabel3D.visible = labelVisible;
+                if (this.cutCube) this.cutCube.visible = cutCubeVisible;
+                if (this.cutCubeLabel) this.cutCubeLabel.visible = cutCubeLabelVisible;
                 if (this.groundElements) {
                     this.groundElements.forEach((element, idx) => {
                         element.visible = groundVisibles[idx];
