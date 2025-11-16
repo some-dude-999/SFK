@@ -1926,11 +1926,10 @@
             return cleanGeometry;
         }
 
-        // Fix normals function - similar to Blender's Shift+N (Recalculate Normals Outside)
+        // Fix normals function - Blender-style connectivity-based algorithm (Shift+N)
         function fixNormals(geometry) {
-            console.log('🔧 Fixing normals...');
+            console.log('🔧 Fixing normals using connectivity-based flood-fill...');
 
-            // First, ensure we have position data
             const positions = geometry.attributes.position;
             if (!positions) {
                 console.warn('⚠️ No position data found');
@@ -1942,23 +1941,53 @@
                 return geometry;
             }
 
-            // Build adjacency information (which triangles share edges)
-            const vertexToTriangles = new Map();
-            for (let i = 0; i < triangleCount; i++) {
-                for (let j = 0; j < 3; j++) {
-                    const vertexIndex = i * 3 + j;
-                    const x = positions.getX(vertexIndex);
-                    const y = positions.getY(vertexIndex);
-                    const z = positions.getZ(vertexIndex);
-                    const key = `${x.toFixed(6)},${y.toFixed(6)},${z.toFixed(6)}`;
-                    if (!vertexToTriangles.has(key)) {
-                        vertexToTriangles.set(key, []);
-                    }
-                    vertexToTriangles.get(key).push(i);
-                }
+            // Helper function to create edge key (ordered to match shared edges)
+            function makeEdgeKey(v1Key, v2Key) {
+                return v1Key < v2Key ? `${v1Key}|${v2Key}` : `${v2Key}|${v1Key}`;
             }
 
-            // Calculate center of mass to determine "outside" direction
+            // Helper function to create vertex key
+            function makeVertexKey(x, y, z) {
+                return `${x.toFixed(6)},${y.toFixed(6)},${z.toFixed(6)}`;
+            }
+
+            // Step 1: Build edge adjacency map
+            // Map: edge -> [{triIdx, edge: [v0Key, v1Key, v2Key], edgeDir: 'v0v1', 'v1v2', or 'v2v0'}]
+            const edgeToTriangles = new Map();
+            const triangles = [];
+
+            for (let i = 0; i < triangleCount; i++) {
+                const i0 = i * 3;
+                const i1 = i * 3 + 1;
+                const i2 = i * 3 + 2;
+
+                const v0Key = makeVertexKey(positions.getX(i0), positions.getY(i0), positions.getZ(i0));
+                const v1Key = makeVertexKey(positions.getX(i1), positions.getY(i1), positions.getZ(i1));
+                const v2Key = makeVertexKey(positions.getX(i2), positions.getY(i2), positions.getZ(i2));
+
+                triangles.push({
+                    v0: {x: positions.getX(i0), y: positions.getY(i0), z: positions.getZ(i0), key: v0Key},
+                    v1: {x: positions.getX(i1), y: positions.getY(i1), z: positions.getZ(i1), key: v1Key},
+                    v2: {x: positions.getX(i2), y: positions.getY(i2), z: positions.getZ(i2), key: v2Key},
+                    flipped: false
+                });
+
+                // Three edges per triangle
+                const edges = [
+                    {key: makeEdgeKey(v0Key, v1Key), dir: [v0Key, v1Key]},
+                    {key: makeEdgeKey(v1Key, v2Key), dir: [v1Key, v2Key]},
+                    {key: makeEdgeKey(v2Key, v0Key), dir: [v2Key, v0Key]}
+                ];
+
+                edges.forEach(edge => {
+                    if (!edgeToTriangles.has(edge.key)) {
+                        edgeToTriangles.set(edge.key, []);
+                    }
+                    edgeToTriangles.get(edge.key).push({triIdx: i, edgeDir: edge.dir});
+                });
+            }
+
+            // Step 2: Find seed triangle (use center-of-mass heuristic for initial orientation)
             let centerX = 0, centerY = 0, centerZ = 0;
             for (let i = 0; i < positions.count; i++) {
                 centerX += positions.getX(i);
@@ -1969,90 +1998,123 @@
             centerY /= positions.count;
             centerZ /= positions.count;
 
-            // For each triangle, check if normal points outward from center
-            // If not, flip the triangle vertices
-            const newVertices = [];
-            let flippedCount = 0;
+            let seedTriIdx = 0;
+            let maxDot = -Infinity;
 
             for (let i = 0; i < triangleCount; i++) {
-                const i0 = i * 3;
-                const i1 = i * 3 + 1;
-                const i2 = i * 3 + 2;
+                const tri = triangles[i];
+                const triCenterX = (tri.v0.x + tri.v1.x + tri.v2.x) / 3;
+                const triCenterY = (tri.v0.y + tri.v1.y + tri.v2.y) / 3;
+                const triCenterZ = (tri.v0.z + tri.v1.z + tri.v2.z) / 3;
 
-                // Get triangle vertices
-                const v0x = positions.getX(i0);
-                const v0y = positions.getY(i0);
-                const v0z = positions.getZ(i0);
-
-                const v1x = positions.getX(i1);
-                const v1y = positions.getY(i1);
-                const v1z = positions.getZ(i1);
-
-                const v2x = positions.getX(i2);
-                const v2y = positions.getY(i2);
-                const v2z = positions.getZ(i2);
-
-                // Calculate triangle center
-                const triCenterX = (v0x + v1x + v2x) / 3;
-                const triCenterY = (v0y + v1y + v2y) / 3;
-                const triCenterZ = (v0z + v1z + v2z) / 3;
-
-                // Calculate face normal using cross product
-                const e1x = v1x - v0x;
-                const e1y = v1y - v0y;
-                const e1z = v1z - v0z;
-
-                const e2x = v2x - v0x;
-                const e2y = v2y - v0y;
-                const e2z = v2z - v0z;
+                const e1x = tri.v1.x - tri.v0.x;
+                const e1y = tri.v1.y - tri.v0.y;
+                const e1z = tri.v1.z - tri.v0.z;
+                const e2x = tri.v2.x - tri.v0.x;
+                const e2y = tri.v2.y - tri.v0.y;
+                const e2z = tri.v2.z - tri.v0.z;
 
                 const normalX = e1y * e2z - e1z * e2y;
                 const normalY = e1z * e2x - e1x * e2z;
                 const normalZ = e1x * e2y - e1y * e2x;
 
-                // Vector from mesh center to triangle center
                 const outwardX = triCenterX - centerX;
                 const outwardY = triCenterY - centerY;
                 const outwardZ = triCenterZ - centerZ;
 
-                // Dot product to check if normal points outward
                 const dotProduct = normalX * outwardX + normalY * outwardY + normalZ * outwardZ;
 
-                // If dot product is negative, normal points inward - flip the triangle
-                if (dotProduct < 0) {
-                    // Flip by reversing vertex order (swap v1 and v2)
-                    newVertices.push(v0x, v0y, v0z);
-                    newVertices.push(v2x, v2y, v2z);
-                    newVertices.push(v1x, v1y, v1z);
-                    flippedCount++;
-                } else {
-                    // Keep original order
-                    newVertices.push(v0x, v0y, v0z);
-                    newVertices.push(v1x, v1y, v1z);
-                    newVertices.push(v2x, v2y, v2z);
+                if (dotProduct > maxDot) {
+                    maxDot = dotProduct;
+                    seedTriIdx = i;
                 }
             }
 
-            if (flippedCount > 0) {
-                console.log(`🔧 Fixed ${flippedCount} inverted normals out of ${triangleCount} triangles`);
-
-                // Create new geometry with corrected vertex order
-                const fixedGeometry = new THREE.BufferGeometry();
-                fixedGeometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(newVertices), 3));
-
-                // Recompute normals with correct face orientation
-                fixedGeometry.computeVertexNormals();
-                fixedGeometry.computeBoundingBox();
-
-                return fixedGeometry;
-            } else {
-                console.log('✅ All normals already correctly oriented');
-
-                // Just recompute normals to ensure they're fresh
-                geometry.computeVertexNormals();
-
-                return geometry;
+            // If seed triangle appears to be pointing inward, flip it
+            if (maxDot < 0) {
+                triangles[seedTriIdx].flipped = true;
             }
+
+            // Step 3: Flood-fill propagation
+            const visited = new Set();
+            const queue = [seedTriIdx];
+            visited.add(seedTriIdx);
+
+            while (queue.length > 0) {
+                const currentTriIdx = queue.shift();
+                const currentTri = triangles[currentTriIdx];
+
+                // Get current triangle's edge directions (accounting for flip)
+                let v0Key = currentTri.v0.key;
+                let v1Key = currentTri.v1.key;
+                let v2Key = currentTri.v2.key;
+
+                if (currentTri.flipped) {
+                    // Swap v1 and v2
+                    [v1Key, v2Key] = [v2Key, v1Key];
+                }
+
+                const currentEdges = [
+                    {key: makeEdgeKey(v0Key, v1Key), dir: [v0Key, v1Key]},
+                    {key: makeEdgeKey(v1Key, v2Key), dir: [v1Key, v2Key]},
+                    {key: makeEdgeKey(v2Key, v0Key), dir: [v2Key, v0Key]}
+                ];
+
+                // Check neighbors sharing edges
+                currentEdges.forEach(currentEdge => {
+                    const neighbors = edgeToTriangles.get(currentEdge.key) || [];
+
+                    neighbors.forEach(neighbor => {
+                        if (neighbor.triIdx === currentTriIdx) return;
+                        if (visited.has(neighbor.triIdx)) return;
+
+                        visited.add(neighbor.triIdx);
+                        queue.push(neighbor.triIdx);
+
+                        // Check edge consistency
+                        // Current triangle has edge going [a -> b]
+                        // Neighbor should have edge going [b -> a] (opposite direction)
+                        const currentDir = currentEdge.dir;
+                        const neighborDir = neighbor.edgeDir;
+
+                        // Check if they're opposite
+                        const isOpposite = (currentDir[0] === neighborDir[1] && currentDir[1] === neighborDir[0]);
+
+                        // If they're in the same direction, neighbor needs to be flipped
+                        if (!isOpposite) {
+                            triangles[neighbor.triIdx].flipped = true;
+                        }
+                    });
+                });
+            }
+
+            // Step 4: Build new geometry with corrected winding
+            const newVertices = [];
+            let flippedCount = 0;
+
+            for (let i = 0; i < triangleCount; i++) {
+                const tri = triangles[i];
+                if (tri.flipped) {
+                    // Swap v1 and v2 to reverse winding
+                    newVertices.push(tri.v0.x, tri.v0.y, tri.v0.z);
+                    newVertices.push(tri.v2.x, tri.v2.y, tri.v2.z);
+                    newVertices.push(tri.v1.x, tri.v1.y, tri.v1.z);
+                    flippedCount++;
+                } else {
+                    newVertices.push(tri.v0.x, tri.v0.y, tri.v0.z);
+                    newVertices.push(tri.v1.x, tri.v1.y, tri.v1.z);
+                    newVertices.push(tri.v2.x, tri.v2.y, tri.v2.z);
+                }
+            }
+
+            console.log(`🔧 Connectivity-based fix: flipped ${flippedCount} of ${triangleCount} triangles for consistent normals`);
+
+            const fixedGeometry = new THREE.BufferGeometry();
+            fixedGeometry.setAttribute('position', new THREE.BufferAttribute(new Float32Array(newVertices), 3));
+            fixedGeometry.computeVertexNormals();
+            fixedGeometry.computeBoundingBox();
+
+            return fixedGeometry;
         }
 
         function parseSTL(buffer) {
@@ -3903,40 +3965,17 @@
                             });
                             const triangleIndices = earcut(flatCoords);
                             if (triangleIndices && triangleIndices.length > 0) {
-                                // Track where cap triangles start in newVertices array
-                                const capStartIndex = newVertices.length;
-
                                 for (let i = 0; i < triangleIndices.length; i += 3) {
                                     const i0 = triangleIndices[i];
                                     const i1 = triangleIndices[i + 1];
                                     const i2 = triangleIndices[i + 2];
-
-                                    const v0 = orderedLoop[i0].clone();
-                                    const v1 = orderedLoop[i1].clone();
-                                    const v2 = orderedLoop[i2].clone();
-
-                                    // Calculate face normal for this cap triangle
-                                    const e1x = v1.x - v0.x;
-                                    const e1y = v1.y - v0.y;
-                                    const e1z = v1.z - v0.z;
-                                    const e2x = v2.x - v0.x;
-                                    const e2y = v2.y - v0.y;
-                                    const e2z = v2.z - v0.z;
-
-                                    // Cross product to get normal
-                                    const normalY = e1z * e2x - e1x * e2z;
-
-                                    // Cap should face downward (negative Y normal)
-                                    // If normal points upward (positive Y), reverse winding order
-                                    if (normalY > 0) {
-                                        // Flip triangle by swapping v1 and v2
-                                        newVertices.push(v0, v2, v1);
-                                    } else {
-                                        // Keep original order
-                                        newVertices.push(v0, v1, v2);
-                                    }
+                                    newVertices.push(
+                                        orderedLoop[i0].clone(),
+                                        orderedLoop[i1].clone(),
+                                        orderedLoop[i2].clone()
+                                    );
                                 }
-                                console.log('✅ Created', triangleIndices.length / 3, 'triangles for island', islandIdx, 'with corrected normals');
+                                console.log('✅ Created', triangleIndices.length / 3, 'triangles for island', islandIdx, 'using earcut');
                             } else {
                                 console.warn('⚠️ Earcut failed for island', islandIdx);
                             }
@@ -3963,6 +4002,13 @@
                     if (finalGeometry !== resultGeometry) {
                         resultGeometry.dispose();
                     }
+                }
+
+                // Always fix normals after cut and cap using Blender-style connectivity algorithm
+                const fixedGeometry = fixNormals(finalGeometry);
+                if (fixedGeometry !== finalGeometry) {
+                    finalGeometry.dispose();
+                    finalGeometry = fixedGeometry;
                 }
 
                 const oldGeometry = mesh.geometry;
