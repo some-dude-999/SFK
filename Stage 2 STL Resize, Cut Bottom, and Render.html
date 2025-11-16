@@ -2805,6 +2805,20 @@
                 heightRow.style.gap = '5px';
                 heightRow.style.justifyContent = 'center';
 
+                // Feet minus button
+                const feetDownBtn = document.createElement('button');
+                feetDownBtn.textContent = '−';
+                feetDownBtn.style.padding = '5px 10px';
+                feetDownBtn.style.backgroundColor = '#4CAF50';
+                feetDownBtn.style.color = 'white';
+                feetDownBtn.style.border = 'none';
+                feetDownBtn.style.borderRadius = '3px';
+                feetDownBtn.style.cursor = 'pointer';
+                feetDownBtn.style.fontWeight = 'bold';
+                feetDownBtn.style.fontSize = '14px';
+                feetDownBtn.onclick = () => adjustHeight(modelId, 'feet', -1);
+                heightRow.appendChild(feetDownBtn);
+
                 // Feet input
                 const feetInput = document.createElement('input');
                 feetInput.type = 'number';
@@ -2830,39 +2844,38 @@
                 feetLabel.style.fontWeight = 'bold';
                 heightRow.appendChild(feetLabel);
 
-                // Feet +/- buttons container
-                const feetBtnsContainer = document.createElement('div');
-                feetBtnsContainer.style.display = 'flex';
-                feetBtnsContainer.style.flexDirection = 'column';
-                feetBtnsContainer.style.gap = '1px';
-
+                // Feet plus button
                 const feetUpBtn = document.createElement('button');
                 feetUpBtn.textContent = '+';
-                feetUpBtn.style.padding = '1px 5px';
+                feetUpBtn.style.padding = '5px 10px';
                 feetUpBtn.style.backgroundColor = '#4CAF50';
                 feetUpBtn.style.color = 'white';
                 feetUpBtn.style.border = 'none';
-                feetUpBtn.style.borderRadius = '2px';
+                feetUpBtn.style.borderRadius = '3px';
                 feetUpBtn.style.cursor = 'pointer';
-                feetUpBtn.style.fontSize = '10px';
-                feetUpBtn.style.lineHeight = '1';
+                feetUpBtn.style.fontWeight = 'bold';
+                feetUpBtn.style.fontSize = '14px';
                 feetUpBtn.onclick = () => adjustHeight(modelId, 'feet', 1);
-                feetBtnsContainer.appendChild(feetUpBtn);
+                heightRow.appendChild(feetUpBtn);
 
-                const feetDownBtn = document.createElement('button');
-                feetDownBtn.textContent = '-';
-                feetDownBtn.style.padding = '1px 5px';
-                feetDownBtn.style.backgroundColor = '#4CAF50';
-                feetDownBtn.style.color = 'white';
-                feetDownBtn.style.border = 'none';
-                feetDownBtn.style.borderRadius = '2px';
-                feetDownBtn.style.cursor = 'pointer';
-                feetDownBtn.style.fontSize = '10px';
-                feetDownBtn.style.lineHeight = '1';
-                feetDownBtn.onclick = () => adjustHeight(modelId, 'feet', -1);
-                feetBtnsContainer.appendChild(feetDownBtn);
+                // Spacer
+                const spacer = document.createElement('span');
+                spacer.style.width = '10px';
+                heightRow.appendChild(spacer);
 
-                heightRow.appendChild(feetBtnsContainer);
+                // Inches minus button
+                const inchDownBtn = document.createElement('button');
+                inchDownBtn.textContent = '−';
+                inchDownBtn.style.padding = '5px 10px';
+                inchDownBtn.style.backgroundColor = '#4CAF50';
+                inchDownBtn.style.color = 'white';
+                inchDownBtn.style.border = 'none';
+                inchDownBtn.style.borderRadius = '3px';
+                inchDownBtn.style.cursor = 'pointer';
+                inchDownBtn.style.fontWeight = 'bold';
+                inchDownBtn.style.fontSize = '14px';
+                inchDownBtn.onclick = () => adjustHeight(modelId, 'inches', -1);
+                heightRow.appendChild(inchDownBtn);
 
                 // Inches input
                 const inchInput = document.createElement('input');
@@ -2889,39 +2902,19 @@
                 inchLabel.style.fontWeight = 'bold';
                 heightRow.appendChild(inchLabel);
 
-                // Inches +/- buttons container
-                const inchBtnsContainer = document.createElement('div');
-                inchBtnsContainer.style.display = 'flex';
-                inchBtnsContainer.style.flexDirection = 'column';
-                inchBtnsContainer.style.gap = '1px';
-
+                // Inches plus button
                 const inchUpBtn = document.createElement('button');
                 inchUpBtn.textContent = '+';
-                inchUpBtn.style.padding = '1px 5px';
+                inchUpBtn.style.padding = '5px 10px';
                 inchUpBtn.style.backgroundColor = '#4CAF50';
                 inchUpBtn.style.color = 'white';
                 inchUpBtn.style.border = 'none';
-                inchUpBtn.style.borderRadius = '2px';
+                inchUpBtn.style.borderRadius = '3px';
                 inchUpBtn.style.cursor = 'pointer';
-                inchUpBtn.style.fontSize = '10px';
-                inchUpBtn.style.lineHeight = '1';
+                inchUpBtn.style.fontWeight = 'bold';
+                inchUpBtn.style.fontSize = '14px';
                 inchUpBtn.onclick = () => adjustHeight(modelId, 'inches', 1);
-                inchBtnsContainer.appendChild(inchUpBtn);
-
-                const inchDownBtn = document.createElement('button');
-                inchDownBtn.textContent = '-';
-                inchDownBtn.style.padding = '1px 5px';
-                inchDownBtn.style.backgroundColor = '#4CAF50';
-                inchDownBtn.style.color = 'white';
-                inchDownBtn.style.border = 'none';
-                inchDownBtn.style.borderRadius = '2px';
-                inchDownBtn.style.cursor = 'pointer';
-                inchDownBtn.style.fontSize = '10px';
-                inchDownBtn.style.lineHeight = '1';
-                inchDownBtn.onclick = () => adjustHeight(modelId, 'inches', -1);
-                inchBtnsContainer.appendChild(inchDownBtn);
-
-                heightRow.appendChild(inchBtnsContainer);
+                heightRow.appendChild(inchUpBtn);
 
                 heightControlsDiv.appendChild(heightRow);
 
@@ -2952,18 +2945,19 @@
                 const inchRow = document.createElement('div');
                 inchRow.style.display = 'flex';
                 inchRow.style.alignItems = 'center';
-                inchRow.style.gap = '3px';
+                inchRow.style.gap = '5px';
                 inchRow.style.justifyContent = 'center';
 
                 const inchDownBtn = document.createElement('button');
-                inchDownBtn.textContent = '▼';
-                inchDownBtn.style.padding = '2px 6px';
+                inchDownBtn.textContent = '−';
+                inchDownBtn.style.padding = '5px 10px';
                 inchDownBtn.style.backgroundColor = '#4CAF50';
                 inchDownBtn.style.color = 'white';
                 inchDownBtn.style.border = 'none';
                 inchDownBtn.style.borderRadius = '3px';
                 inchDownBtn.style.cursor = 'pointer';
-                inchDownBtn.style.fontSize = '10px';
+                inchDownBtn.style.fontWeight = 'bold';
+                inchDownBtn.style.fontSize = '14px';
                 inchDownBtn.onclick = () => adjustHeightInches(modelId, -0.5);
                 inchRow.appendChild(inchDownBtn);
 
@@ -2992,14 +2986,15 @@
                 inchRow.appendChild(inchLabel);
 
                 const inchUpBtn = document.createElement('button');
-                inchUpBtn.textContent = '▲';
-                inchUpBtn.style.padding = '2px 6px';
+                inchUpBtn.textContent = '+';
+                inchUpBtn.style.padding = '5px 10px';
                 inchUpBtn.style.backgroundColor = '#4CAF50';
                 inchUpBtn.style.color = 'white';
                 inchUpBtn.style.border = 'none';
                 inchUpBtn.style.borderRadius = '3px';
                 inchUpBtn.style.cursor = 'pointer';
-                inchUpBtn.style.fontSize = '10px';
+                inchUpBtn.style.fontWeight = 'bold';
+                inchUpBtn.style.fontSize = '14px';
                 inchUpBtn.onclick = () => adjustHeightInches(modelId, 0.5);
                 inchRow.appendChild(inchUpBtn);
 
