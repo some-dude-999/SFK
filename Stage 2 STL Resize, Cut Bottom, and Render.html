@@ -1597,6 +1597,44 @@
                     this.fitAllModelsAndManInView();
                 }
             }
+            detachCutHelpersForRender() {
+                return {
+                    cube: this.cutCube || null,
+                    cubeParent: this.cutCube && this.cutCube.parent ? this.cutCube.parent : null,
+                    cubeVisible: this.cutCube ? this.cutCube.visible : false,
+                    label: this.cutCubeLabel || null,
+                    labelParent: this.cutCubeLabel && this.cutCubeLabel.parent ? this.cutCubeLabel.parent : null,
+                    labelVisible: this.cutCubeLabel ? this.cutCubeLabel.visible : false
+                };
+            }
+            removeCutHelpersFromScene(state) {
+                if (!state) return;
+                if (state.cube && state.cubeParent) {
+                    state.cubeParent.remove(state.cube);
+                } else if (state.cube) {
+                    state.cube.visible = false;
+                }
+                if (state.label && state.labelParent) {
+                    state.labelParent.remove(state.label);
+                } else if (state.label) {
+                    state.label.visible = false;
+                }
+            }
+            restoreCutHelpersAfterRender(state) {
+                if (!state) return;
+                if (state.cube) {
+                    if (state.cubeParent) {
+                        state.cubeParent.add(state.cube);
+                    }
+                    state.cube.visible = state.cubeVisible;
+                }
+                if (state.label) {
+                    if (state.labelParent) {
+                        state.labelParent.add(state.label);
+                    }
+                    state.label.visible = state.labelVisible;
+                }
+            }
             createTempRenderer(width, height) {
                 const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true, preserveDrawingBuffer: true });
                 renderer.shadowMap.enabled = true;
@@ -1615,62 +1653,52 @@
                 tempRenderer.setClearColor(clearColor, clearAlpha);
 
                 const originalBackground = this.scene.background;
+                const cutHelperState = this.detachCutHelpersForRender();
+                this.removeCutHelpersFromScene(cutHelperState);
                 this.scene.background = new THREE.Color(0x2a2a2a);
 
-                // Hide cut cube and label during screenshot
-                const cutCubeVisible = this.cutCube ? this.cutCube.visible : false;
-                const cutCubeLabelVisible = this.cutCubeLabel ? this.cutCubeLabel.visible : false;
-                if (this.cutCube) this.cutCube.visible = false;
-                if (this.cutCubeLabel) this.cutCubeLabel.visible = false;
+                let dataURL = '';
+                try {
+                    tempRenderer.render(this.scene, this.camera);
 
-                tempRenderer.render(this.scene, this.camera);
+                    const glCanvas = tempRenderer.domElement;
+                    const canvas = document.createElement('canvas');
+                    canvas.width = width;
+                    canvas.height = height;
+                    const ctx = canvas.getContext('2d');
 
-                const glCanvas = tempRenderer.domElement;
-                const canvas = document.createElement('canvas');
-                canvas.width = width;
-                canvas.height = height;
-                const ctx = canvas.getContext('2d');
+                    if (!ctx) {
+                        console.error('Failed to obtain 2D context for screenshot canvas.');
+                        dataURL = glCanvas.toDataURL('image/png');
+                        return dataURL;
+                    }
 
-                if (!ctx) {
-                    console.error('Failed to obtain 2D context for screenshot canvas.');
-                    const fallbackDataURL = glCanvas.toDataURL('image/png');
+                    ctx.drawImage(glCanvas, 0, 0);
+
+                    // Determine border color based on flatness status
+                    let borderColor = '#444'; // Default gray
+                    if (this.models.length > 0) {
+                        const modelData = this.models[0];
+                        const flatness = this.flatnessStatus.get(modelData.id);
+                        if (flatness) {
+                            borderColor = flatness.isFlat ? '#4CAF50' : '#f44336'; // Green if flat, red if not
+                        }
+                    }
+
+                    // Draw border on canvas (technical render quality control indicator)
+                    const borderWidth = 8; // 8px border at 1080px resolution
+                    ctx.strokeStyle = borderColor;
+                    ctx.lineWidth = borderWidth;
+                    ctx.strokeRect(borderWidth / 2, borderWidth / 2, width - borderWidth, height - borderWidth);
+
+                    dataURL = canvas.toDataURL('image/png');
+                    return dataURL;
+                } finally {
                     this.scene.background = originalBackground;
-                    // Restore cut cube and label visibility
-                    if (this.cutCube) this.cutCube.visible = cutCubeVisible;
-                    if (this.cutCubeLabel) this.cutCubeLabel.visible = cutCubeLabelVisible;
+                    this.restoreCutHelpersAfterRender(cutHelperState);
                     if (tempRenderer.forceContextLoss) tempRenderer.forceContextLoss();
                     tempRenderer.dispose();
-                    return fallbackDataURL;
                 }
-
-                ctx.drawImage(glCanvas, 0, 0);
-
-                // Determine border color based on flatness status
-                let borderColor = '#444'; // Default gray
-                if (this.models.length > 0) {
-                    const modelData = this.models[0];
-                    const flatness = this.flatnessStatus.get(modelData.id);
-                    if (flatness) {
-                        borderColor = flatness.isFlat ? '#4CAF50' : '#f44336'; // Green if flat, red if not
-                    }
-                }
-
-                // Draw border on canvas (technical render quality control indicator)
-                const borderWidth = 8; // 8px border at 1080px resolution
-                ctx.strokeStyle = borderColor;
-                ctx.lineWidth = borderWidth;
-                ctx.strokeRect(borderWidth / 2, borderWidth / 2, width - borderWidth, height - borderWidth);
-
-                const dataURL = canvas.toDataURL('image/png');
-                this.scene.background = originalBackground;
-
-                // Restore cut cube and label visibility
-                if (this.cutCube) this.cutCube.visible = cutCubeVisible;
-                if (this.cutCubeLabel) this.cutCubeLabel.visible = cutCubeLabelVisible;
-
-                if (tempRenderer.forceContextLoss) tempRenderer.forceContextLoss();
-                tempRenderer.dispose();
-                return dataURL;
             }
             takeTransparentTiltedScreenshot() {
                 const originalBackground = this.scene.background;
@@ -1687,12 +1715,10 @@
                 const labelVisible = this.manDudeLabel3D ? this.manDudeLabel3D.visible : false;
                 const groundVisibles = this.groundElements ? this.groundElements.map(el => el.visible) : [];
                 const heightLabelsVisibles = Array.from(this.heightLabels.values()).map(label => label.visible);
-                const cutCubeVisible = this.cutCube ? this.cutCube.visible : false;
-                const cutCubeLabelVisible = this.cutCubeLabel ? this.cutCubeLabel.visible : false;
+                const cutHelperState = this.detachCutHelpersForRender();
+                this.removeCutHelpersFromScene(cutHelperState);
                 if (this.manGroup) this.manGroup.visible = false;
                 if (this.manDudeLabel3D) this.manDudeLabel3D.visible = false;
-                if (this.cutCube) this.cutCube.visible = false;
-                if (this.cutCubeLabel) this.cutCubeLabel.visible = false;
                 if (this.groundElements) {
                     this.groundElements.forEach(element => {
                         element.visible = false;
@@ -1769,8 +1795,7 @@
                 this.camera.updateProjectionMatrix();
                 if (this.manGroup) this.manGroup.visible = manVisible;
                 if (this.manDudeLabel3D) this.manDudeLabel3D.visible = labelVisible;
-                if (this.cutCube) this.cutCube.visible = cutCubeVisible;
-                if (this.cutCubeLabel) this.cutCubeLabel.visible = cutCubeLabelVisible;
+                this.restoreCutHelpersAfterRender(cutHelperState);
                 if (this.groundElements) {
                     this.groundElements.forEach((element, idx) => {
                         element.visible = groundVisibles[idx];
